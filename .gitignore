@@ -9,5 +9,3 @@ webpay-project
 webpay-project/*
 src/config/*.tmp
 src/config/env.js
-/index.html
-/index_prod.html

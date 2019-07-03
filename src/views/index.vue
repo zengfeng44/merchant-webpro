@@ -15,7 +15,7 @@
 			}
 		}
 		.pg-body{
-			.ivu-form{
+			.consum-form{
 				background: #fff;
 				overflow: hidden;
 				padding:49px 5px 25px 5px;
@@ -48,7 +48,7 @@
 			<h1>{{merchant_name}}</h1>
 		</header>
 		<div class="pg-body">
-			<Form :model="merchantForm" :label-width="80">
+			<Form :model="merchantForm" :label-width="80" class="consum-form">
 				<FormItem label="消费金额：">
 					<Input prefix="logo-yen" type="number" v-model="merchantForm.amount" size="large" placeholder="请输入您的消费金额"></Input>
 				</FormItem>
@@ -57,6 +57,24 @@
 				<Card :bordered="false">
 					<p slot="title">花伴礼会员专享</p>
 					<div class="show-discount">
+						<Form :model="merchantForm">
+							<FormItem>
+								<Input type="tel" v-model="merchantForm.mobile" @on-change="checkMobile" placeholder="请输入您的手机号码登录/注册花伴礼会员"></Input>
+							</FormItem>
+							<Row v-if="check_member == 'show'">
+								<Col span="14">
+									<FormItem>
+										<Input type="tel" v-model="merchantForm.smscode" placeholder="手机短信验证码"></Input>
+									</FormItem>
+								</Col>
+								<Col span="8" offset="2">
+									<FormItem>
+										<Button type="primary" @click="handleSendSmscode" v-bind:disabled="sendsms_data.state">{{sendsms_data.button_text}}</Button>
+									</FormItem>
+								</Col>
+							</Row>
+						</Form>
+						<Divider dashed />
 						<label>礼品值：</label>
 						<span>{{merchantForm.score}}</span>
 						<p class="hbl-tips">* 花伴礼会员在该商家消费的每笔金额都可获得礼品值！</p>
@@ -75,15 +93,25 @@
 			return {
 				mersn : 0,
 				merchant_name: '花伴礼',
+				check_member: '',	// checked：已注册的会员, show：未注册的会员
 				merchantForm: {
+					member_id: 0,
+					mobile: '',
+					smscode: '',
 					amount: '',
 					score: '0.00'
+				},
+				sendsms_data: {
+					count_time: 10,
+					state: false,
+					button_text: "发送短信验证码",
 				}
 			}
 		},
 		mounted: function(){
 			let mersn = this.$route.query.mersn;
 			let merchant_name = decodeURIComponent(this.$route.query.mchname);
+			
 			merchant_name ? merchant_name : this.merchant_name;
 			this.$util.title(merchant_name);
 
@@ -110,11 +138,52 @@
 				this.mersn = mersn;
 				this.merchant_name = merchant_name;
 			},
-			handleWechatPay(){
-				this.$axios.post('merchant/index/wepay', {}).then(function(resp){
+			checkMobile () {
+				let that = this;
+				let mobile = that.merchantForm.mobile;
+				if (mobile.length == 11){
+					that.$axios.post('merchant/index/checkMember', {
+						mobile: mobile,
+					}).then(function(resp){
+						let res = resp.data;
+						if (res.code == 2001){
+							that.check_member	=	'show';
+						}else if (res.code == 0) {
+							that.check_member	=	'checked';
+							that.merchantForm.member_id	=	res.result.member_id;
+						}
+					});
+				}
+			},
+			handleSendSmscode () {
+				let that = this;
+				let mobile = that.merchantForm.mobile;
+
+				if(!(/^1[3456789]\d{9}$/.test(mobile))){ 
+					that.$Message.error('手机号码有误，请重新填写！');
+					return false; 
+				}
+
+				that.$axios.post('merchant/index/sendSmscode', {
+					mobile: mobile
+				}).then(function(resp){
 					let res = resp.data;
-					if (res.code == 0){
-						window.location.href = res.result.wechat_pay;
+					if (res.code == 0) {
+						that.$Message.success("短信验证码发送成功！");
+						that.sendsms_data.state = true;
+						let clock = window.setInterval(() => {
+							that.sendsms_data.count_time--;
+							that.sendsms_data.button_text = that.sendsms_data.count_time + 's后重新发送';
+							
+							if (that.sendsms_data.count_time <= 0){
+								window.clearInterval(clock);
+								that.sendsms_data.state = false;
+								that.sendsms_data.button_text = "发送短信验证码";
+								that.sendsms_data.count_time = 90;
+							}
+						}, 1000);
+					} else {
+						that.$Message.error(res.message);
 					}
 				});
 			},
@@ -122,6 +191,8 @@
 				let that	=	this;
 				let mersn	=	this.mersn;
 				let amount	=	this.merchantForm.amount;
+				let mobile	=	this.merchantForm.mobile;
+				let smscode	=	this.merchantForm.smscode;
 
 				if (mersn <= 0){
 					that.$Modal.error({
@@ -139,9 +210,33 @@
 					return false;
 				}
 
+				if (!mobile){
+					that.$Modal.info({
+						title: "提示",
+						content: "请填写您的手机号码，用于获取花伴礼会员礼品值！"
+					});
+					return false; 
+				}else if(!(/^1[3456789]\d{9}$/.test(mobile))){ 
+					that.$Modal.error({
+						title: "提示",
+						content: "手机号码有误，请重新填写！"
+					});
+					return false; 
+				}
+
+				if (that.check_member == 'show' && !smscode){
+					that.$Modal.error({
+						title: "提示",
+						content: "请输入您收到的短信验证码！"
+					});
+					return false; 
+				}
+
 				that.$axios.post('merchant/allinpay/wappay', {
 					mersn: mersn,
-					trxamt: amount
+					trxamt: amount,
+					mobile: mobile,
+					smscode: smscode
 				}).then(function(resp){
 					let res = resp.data;
 					if (res.code == 0) {

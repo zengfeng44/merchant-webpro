@@ -50,7 +50,7 @@
 		<div class="pg-body">
 			<Form :model="merchantForm" :label-width="80" class="consum-form">
 				<FormItem label="消费金额：">
-					<Input prefix="logo-yen" type="number" v-model="merchantForm.amount" size="large" placeholder="请输入您的消费金额"></Input>
+					<Input prefix="logo-yen" type="number" v-model="merchantForm.amount" size="large" @on-change="handleCalcGift" placeholder="请输入您的消费金额"></Input>
 				</FormItem>
 			</Form>
 			<div class="hbl-member">
@@ -93,6 +93,7 @@
 			return {
 				mersn : 0,
 				merchant_name: '花伴礼',
+				gift_rate: 1,
 				check_member: '',	// checked：已注册的会员, show：未注册的会员
 				merchantForm: {
 					member_id: 0,
@@ -111,22 +112,16 @@
 		mounted: function(){
 			let mersn = this.$route.query.mersn;
 			let merchant_name = decodeURIComponent(this.$route.query.mchname);
+			let gift_rate = this.$route.query.gift_rate;
 			
-			merchant_name ? merchant_name : this.merchant_name;
+			merchant_name	=	merchant_name ? merchant_name : this.merchant_name;
+			gift_rate		=	gift_rate ? gift_rate : 1;
+			
 			this.$util.title(merchant_name);
-
-			this.initMerchantInfo(mersn, merchant_name);
-		},
-		watch: {
-			merchantForm: {
-				handler(val, oldVal){
-					this.merchantForm.score = Number(val.amount)
-				},
-				deep: true
-			}
+			this.initMerchantInfo(mersn, merchant_name, gift_rate);
 		},
         methods: {
-			initMerchantInfo(mersn, merchant_name) {
+			initMerchantInfo(mersn, merchant_name, gift_rate) {
 				if (mersn == null){
 					this.$Modal.error({
 						title: "提示",
@@ -137,6 +132,7 @@
 
 				this.mersn = mersn;
 				this.merchant_name = merchant_name;
+				this.gift_rate = gift_rate;
 			},
 			checkMobile () {
 				let that = this;
@@ -186,6 +182,13 @@
 						that.$Message.error(res.message);
 					}
 				});
+			},
+			handleCalcGift () {
+				let amount		=	this.merchantForm.amount;
+				let gift_rate	=	this.gift_rate;
+				let gift_score	=	Number(amount * gift_rate).toFixed(2);
+				
+				this.merchantForm.score = gift_score;
 			},
 			handleCheckOrder(){
 				let that	=	this;

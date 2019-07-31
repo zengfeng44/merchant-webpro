@@ -33,7 +33,7 @@ module.exports = merge(webpackBaseConfig, {
         })
     ],
 	devServer: {
-		host: "192.168.0.5",
+		host: "192.168.1.108",
 		port: 8080, // 端口号
 		https: false, // https:{type:Boolean}
 		open: false, //配置自动启动浏览器

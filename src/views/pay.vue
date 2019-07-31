@@ -13,18 +13,6 @@
 <template>
     <section class="container">
 		<div>
-			<!--
-let pay_data	=	{
-					mersn: mersn,
-					merchant_name: merchant_name,
-					trxamt: amount,
-					mobile: mobile,
-					payment_type: 'MPPAY',
-					gift_rate: that.gift_rate,
-					pay_rate: that.pay_rate
-				}
-
-			-->
 			<p>{{pay_data.mersn}}</p>
 			<p>{{pay_data.merchant_name}}</p>
 			<p>{{pay_data.trxamt}}</p>
@@ -57,8 +45,7 @@ let pay_data	=	{
 					maskClosable : false,
 					disTips : true,
 				},
-				pay_data : {},
-				wechat_data: {}
+				pay_data : {}
 			}
 		},
 		mounted: function(){
@@ -76,18 +63,24 @@ let pay_data	=	{
 				let that = this;
 				that.$axios.post('merchant/allinpay/wechatpay', that.pay_data).then(function(resp){
 					let res = resp.data;
-					that.wechat_data = res.result;
+					let wechat_data = res.result;
 
 					if (res.code == 1004) {
 						if (typeof WeixinJSBridge == "undefined"){
 							if( document.addEventListener ){
-								document.addEventListener('WeixinJSBridgeReady', onBridgeReady, false);
+								document.addEventListener('WeixinJSBridgeReady', function(){
+									that.onBridgeReady(wechat_data);
+								}, false);
 							}else if (document.attachEvent){
-								document.attachEvent('WeixinJSBridgeReady', onBridgeReady);
-								document.attachEvent('onWeixinJSBridgeReady', onBridgeReady);
+								document.attachEvent('WeixinJSBridgeReady', function(){
+									that.onBridgeReady(wechat_data);
+								});
+								document.attachEvent('onWeixinJSBridgeReady', function(){
+									that.onBridgeReady(wechat_data);
+								});
 							}
 						}else{
-							that.onBridgeReady();
+							that.onBridgeReady(wechat_data);
 						}
 					} else {
 						that.$Modal.error({
@@ -97,9 +90,8 @@ let pay_data	=	{
 					}
 				});
 			},
-			onBridgeReady () {
-				let wechat_data = this.wechat_data;
-				alert("Wechat Data: " + JSON.stringify(wechat_data));
+			onBridgeReady (wechat_data) {
+				let that = this;
 				WeixinJSBridge.invoke(
 					'getBrandWCPayRequest', {
 						"appId" : wechat_data.appId,
@@ -111,17 +103,15 @@ let pay_data	=	{
 					},
 					function(res){
 						if(res.err_msg == "get_brand_wcpay_request:ok" ){
-							// 使用以上方式判断前端返回,微信团队郑重提示：
-							//res.err_msg将在用户支付成功后返回ok，但并不保证它绝对可靠。
+							window.location.href = "https://merchant.jfhycn.com/web/merchant/presentGift?mersn=" + that.pay_data.mersn;
+						} else {
+							that.$Modal.info({
+								title: "付款提示",
+								content: "您已取消付款！"
+							});
 						}
 					}
 				); 
-			},
-			handleFinshed () {
-				window.location.href = "https://merchant.jfhycn.com/web/merchant/presentGift?mersn=" + this.pay_data.mersn;
-			},
-			handleHelp () {
-				window.location.href = "https://merchant.jfhycn.com/web/merchant/presentGift?mersn=" + this.pay_data.mersn;
 			}
         }
     }

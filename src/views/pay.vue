@@ -12,28 +12,7 @@
 </style>
 <template>
     <section class="container">
-		<div>
-			<p>{{pay_data.mersn}}</p>
-			<p>{{pay_data.merchant_name}}</p>
-			<p>{{pay_data.trxamt}}</p>
-			<p>{{pay_data.mobile}}</p>
-			<p>{{pay_data.payment_type}}</p>
-			<p>{{pay_data.gift_rate}}</p>
-			<p>{{pay_data.pay_rate}}</p>
-			<div>
-				{{message}}
-			</div>
-		</div>
-		<Modal
-			v-model="TipsModal.disTips"
-			title="付款提示"
-			okText="我已完成支付"
-			cancelText="取消"
-			:maskClosable="TipsModal.maskClosable"
-			@on-ok="handleFinshed"
-			@on-cancel="handleHelp">
-			<p>请在打开的微信支付中完成付款，支付完成前请不要关闭该窗口！</p>
-		</Modal>
+		<div>&nbsp;</div>
     </section>
 </template>
 <script>
@@ -107,7 +86,10 @@
 						} else {
 							that.$Modal.info({
 								title: "付款提示",
-								content: "您已取消付款！"
+								content: "您已取消付款！",
+								onOk: function(){
+									window.location.href = "https://merchant.jfhycn.com/web/merchant/presentGift?mersn=" + that.pay_data.mersn;
+								}
 							});
 						}
 					}
